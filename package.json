@@ -1,0 +1,23 @@
+{
+  "name": "react-native-locationiq",
+  "version": "0.1.0",
+  "description": "A React Native module to transform geographic coordinates (latitude and longitude) into a description of a location (i.e. street address, town, city, country, etc.) and vice versa.",
+  "main": "LocationIQ.js",
+  "typings": "./index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marlove/react-native-locationiq"
+  },
+  "keywords": [
+    "react-native",
+    "ios",
+    "android",
+    "geocoder",
+    "geocoding",
+    "locationiq"
+  ],
+  "authors": [
+    "Gabriel Lucas <eu@gabriellucas.com.br> (https://gabriellucas.com.br)"
+  ],
+  "license": "MIT"
+}
