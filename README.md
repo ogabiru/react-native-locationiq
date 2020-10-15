@@ -27,6 +27,13 @@ LocationIQ.reverse(41.89, 12.49)
 		})
 		.catch(error => console.warn(error));
 
+LocationIQ.nearby(41.89, 12.49, 'hospital', 1000)
+		.then(json => {
+			var address = json.address;
+			console.log(adress);
+		})
+		.catch(error => console.warn(error));
+
 // Works as well :
 // ------------
 

@@ -70,39 +70,7 @@ export default LocationIQ = {
 		// build url
 		const url = `https://us1.locationiq.com/v1/reverse.php?${toQueryParams(queryParams)}`;
 
-		let response, data;
-
-		// fetch
-		try {
-			response = await fetch(url);
-		} catch(error) {
-			throw {
-				code : LocationIQ.Errors.FETCHING,
-				message : "Error while fetching. Check your network.",
-				origin : error,
-			};
-		}
-
-		// parse
-		try {
-			data = await response.json();
-		} catch(error) {
-			throw {
-				code : LocationIQ.Errors.PARSING,
-				message : "Error while parsing response's body into JSON. The response is in the error's 'origin' field. Try to parse it yourself.",
-				origin : response,
-			};
-		}
-
-		// check response's data
-		if (data.place_id === undefined)
-			throw {
-				code : LocationIQ.Errors.SERVER,
-				message : "Error from the server while geocoding. The received datas are in the error's 'origin' field. Check it for more informations.",
-				origin : data,
-			};
-
-		return data;
+		return await fetchResponse(url);
 	},
 
 	/**
@@ -143,39 +111,59 @@ export default LocationIQ = {
 		// build url
 		const url = `https://us1.locationiq.com/v1/search.php?${toQueryParams(queryParams)}`;
 
-		let response, data;
+		return await fetchResponse(url);
+	},
 
-		// fetch
-		try {
-			response = await fetch(url);
-		} catch(error) {
+	/**
+	 * Do <a href="https://locationiq.com/docs#nearby-points-of-interest-poi-private-beta">(nearby) Points of Interest nearby</a>, get geographic coordinates nearby points of interest.
+	 * Accepted parameters:
+	 * <ul>
+	 *     <li>from(Number latitude, Number longitude, String tag, Nuber radius)</li>
+	 *     <li>from(Array [latitude, longitude, tag, radius])</li>
+	 *     <li>from(Object {latitude, longitude, tag, radius})</li>
+	 *     <li>from(Object {lat, lng, tag, radius})</li>
+	 * </ul>
+	 * @returns {Promise.<Object>} Object containing informations about POI nearby the coordinates.
+	 * @see https://locationiq.com/docs#nearby-points-of-interest-poi-private-beta
+	 */
+	async nearby(...params) {
+		// check api key
+		if (!LocationIQ.isInit)
 			throw {
-				code : LocationIQ.Errors.FETCHING,
-				message : "Error while fetching. Check your network.",
-				origin : error,
-			};
-		}
-
-		// parse
-		try {
-			data = await response.json();
-		} catch(error) {
-			throw {
-				code : LocationIQ.Errors.PARSING,
-				message : "Error while parsing response's body into JSON. The response is in the error's 'origin' field. Try to parse it yourself.",
-				origin : response,
-			};
-		}
-
-		// check response's data
-		if (data[0] === undefined)
-			throw {
-				code : LocationIQ.Errors.SERVER,
-				message : "Error from the server while geocoding. The received datas are in the error's 'origin' field. Check it for more informations.",
-				origin : data,
+				code : LocationIQ.Errors.NOT_INITIATED,
+				message : "LocationIQ isn't initialized. Call LocationIQ.init function, passing it your token as parameter.",
 			};
 
-		return data;
+		// --- convert parameters ---
+		let queryParams;
+
+		// (latitude, longitude)
+		if (!isNaN(params[0]) && !isNaN(params[1]) && typeof params[2] === 'string' && !isNaN(params[3]))
+			queryParams = {lat : `${params[0]}`, lon : `${params[1]}`, tag : `${params[2]}`, radius : `${params[3]}`};
+
+		// [latitude, longitude]
+		else if (params[0] instanceof Array)
+			queryParams = {lat : `${params[0][0]}`, lon : `${params[0][1]}`, tag : `${params[0][2]}`, radius : `${params[0][3]}`};
+
+		// {latitude, longitude}  or {lat, lng}
+		else if (params[0] instanceof Object)
+			queryParams = {lat : `${params[0].lat || params[0].latitude}`, lon : `${params[0].lng || params[0].longitude}`, tag : `${params[0].tag}`, radius : `${params[0].radius}`};
+
+		// --- start geocoding ---
+
+		// check query params
+		if (!queryParams)
+		// no query params, means parameters where invalid
+			throw {
+				code : LocationIQ.Errors.INVALID_PARAMETERS,
+				message : "Invalid parameters : \n" + JSON.stringify(params, null, 2),
+			};
+
+		queryParams = { key: this.token, format: 'json', ...queryParams }
+		// build url
+		const url = `https://us1.locationiq.com/v1/nearby.php?${toQueryParams(queryParams)}`;
+		
+		return await fetchResponse(url);
 	},
 
 	/**
@@ -222,4 +210,45 @@ function toQueryParams(object) {
 		.filter(key => !!object[key])
 		.map(key => key + "=" + encodeURIComponent(object[key]))
 		.join("&")
+}
+
+/**
+ * Convert an object into query parameters.
+ * @param {string} url Object to convert.
+ * @returns {string} Encoded query parameters.
+ */
+async function fetchResponse(url) {
+	let response, data;
+
+	// fetch
+	try {
+		response = await fetch(url);
+	} catch(error) {
+		throw {
+			code : LocationIQ.Errors.FETCHING,
+			message : "Error while fetching. Check your network.",
+			origin : error,
+		};
+	}
+
+	// parse
+	try {
+		data = await response.json();
+	} catch(error) {
+		throw {
+			code : LocationIQ.Errors.PARSING,
+			message : "Error while parsing response's body into JSON. The response is in the error's 'origin' field. Try to parse it yourself.",
+			origin : response,
+		};
+	}
+
+	// check response's data
+	if (data.place_id === undefined && data[0] === undefined && data.osm_id === undefined)
+		throw {
+			code : LocationIQ.Errors.SERVER,
+			message : "Expected data was not found. The received datas are in the error's 'origin' field. Check it for more informations.",
+			origin : data,
+		};
+
+	return data;
 }
